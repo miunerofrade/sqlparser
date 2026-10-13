@@ -1,27 +1,18 @@
 ///|
 pub fn BinaryOperator::get_precedence(self : Self) -> Precedence {
   match self {
-    BinaryOperator::Plus | BinaryOperator::Minus => Precedence::PlusMinus
-    BinaryOperator::Mul
-    | BinaryOperator::Div
-    | BinaryOperator::IntegerDiv
-    | BinaryOperator::Mod => Precedence::MulDivMod
-    BinaryOperator::Eq
-    | BinaryOperator::Neq
-    | BinaryOperator::Lt
-    | BinaryOperator::Gt
-    | BinaryOperator::LtEq
-    | BinaryOperator::GtEq
-    | BinaryOperator::Spaceship => Precedence::Eq
-    BinaryOperator::And => Precedence::And
-    BinaryOperator::Or => Precedence::Or
+    Plus | Minus => PlusMinus
+    Mul | Div | IntegerDiv | Mod => MulDivMod
+    Eq | Neq | Lt | Gt | LtEq | GtEq | Spaceship => Eq
+    And => And
+    Or => Or
     // PostgreSQL JSON operators - higher precedence than comparison
-    BinaryOperator::JsonExtract
-    | BinaryOperator::JsonExtractText
-    | BinaryOperator::JsonExtractPath
-    | BinaryOperator::JsonExtractPathText
-    | BinaryOperator::JsonContains
-    | BinaryOperator::JsonContainedIn => Precedence::JsonOperator
+    JsonExtract
+    | JsonExtractText
+    | JsonExtractPath
+    | JsonExtractPathText
+    | JsonContains
+    | JsonContainedIn => JsonOperator
   }
 }
 
@@ -39,7 +30,7 @@ pub(all) enum Precedence {
 }
 
 ///|
-pub fn Precedence::value(self : Precedence) -> Int {
+pub fn Precedence::value(self : Precedence) -> Int32 {
   match self {
     And => 10
     Like => 19

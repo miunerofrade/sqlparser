@@ -21,7 +21,7 @@ pub impl @pp.Pretty for Statements with fn pretty(self) {
 
 ///|
 #alias("_[_]")
-pub fn Statements::get(self : Self, index : Int) -> Statement {
+pub fn Statements::get(self : Self, index : Int32) -> Statement {
   self.stmts[index]
 }
 
@@ -73,7 +73,7 @@ pub(all) enum Statement {
 ///|
 pub impl @pp.Pretty for Statement with fn pretty(self) {
   (match self {
-    Statement::Query(stmt) => stmt.pretty()
+    Query(stmt) => stmt.pretty()
     CreateTable(stmt) => stmt.pretty()
     CreateView(stmt) => stmt.pretty()
     CreateIndex(stmt) => stmt.pretty()
@@ -268,9 +268,9 @@ enum SetOperator {
 ///|
 pub impl @pp.Pretty for SetOperator with fn pretty(self) {
   match self {
-    SetOperator::Union => @pp.text("UNION")
-    SetOperator::Intersect => @pp.text("INTERSECT")
-    SetOperator::Except => @pp.text("EXCEPT")
+    Union => @pp.text("UNION")
+    Intersect => @pp.text("INTERSECT")
+    Except => @pp.text("EXCEPT")
   }
 }
 
@@ -284,9 +284,9 @@ pub(all) enum Projection {
 ///|
 pub impl @pp.Pretty for Projection with fn pretty(self) {
   match self {
-    Projection::Wildcard => @pp.char('*')
-    Projection::UnamedExpr(expr) => expr.pretty()
-    Projection::AliasedExpr(expr, alias_name) =>
+    Wildcard => @pp.char('*')
+    UnamedExpr(expr) => expr.pretty()
+    AliasedExpr(expr, alias_name) =>
       expr.pretty() + @pp.text(" AS ") + @pp.text(alias_name)
   }
 }
@@ -349,10 +349,9 @@ pub(all) enum Expr {
 
 ///|
 fn wrap_parens(expr : Expr, current_op : BinaryOperator) -> @pp.Document {
-  if current_op == BinaryOperator::Or &&
-    expr is Expr::BinaryOperation(_, And, _) {
+  if current_op == Or && expr is BinaryOperation(_, And, _) {
     @pp.parens(@pp.nest(@pp.hardline + expr.pretty()) + @pp.hardline)
-  } else if expr is Expr::BinaryOperation(_, op, _) &&
+  } else if expr is BinaryOperation(_, op, _) &&
     op.get_precedence().value() < current_op.get_precedence().value() {
     @pp.parens(expr.pretty())
   } else {
@@ -363,18 +362,18 @@ fn wrap_parens(expr : Expr, current_op : BinaryOperator) -> @pp.Document {
 ///|
 pub impl @pp.Pretty for Expr with fn pretty(self) {
   match self {
-    Expr::Identifier(name) => @pp.text(name)
-    Expr::CompoundIdentifier(parts) =>
+    Identifier(name) => @pp.text(name)
+    CompoundIdentifier(parts) =>
       @pp.separate(@pp.text("."), parts.map(@pp.text))
-    Expr::Literal(lit) => lit.pretty()
-    Expr::BinaryOperation(left, op, right) =>
+    Literal(lit) => lit.pretty()
+    BinaryOperation(left, op, right) =>
       wrap_parens(left, op) +
       @pp.space +
       op.pretty() +
       @pp.space +
       wrap_parens(right, op)
-    Expr::UnaryOperation(op, expr) => op.pretty() + expr.pretty()
-    Expr::FunctionCall(name, dup, args, filter) =>
+    UnaryOperation(op, expr) => op.pretty() + expr.pretty()
+    FunctionCall(name, dup, args, filter) =>
       @pp.text(name) +
       @pp.parens(
         (if dup is Some(dup) { dup.pretty() + @pp.space } else { @pp.empty }) +
@@ -385,53 +384,53 @@ pub impl @pp.Pretty for Expr with fn pretty(self) {
       } else {
         @pp.empty
       })
-    Expr::Wildcard => @pp.char('*')
+    Wildcard => @pp.char('*')
     Datetime(s) => @pp.text("DATE '") + @pp.text(s) + @pp.char('\'')
     Interval(s, qualifier) =>
       @pp.text("INTERVAL '") + @pp.text(s) + @pp.text("' ") + qualifier.pretty()
-    Expr::Like(positive~, left, right) =>
+    Like(positive~, left, right) =>
       left.pretty() +
       @pp.text(if positive { "" } else { " NOT" }) +
       @pp.text(" LIKE ") +
       right.pretty()
-    Expr::ILike(positive~, left, right) =>
+    ILike(positive~, left, right) =>
       left.pretty() +
       @pp.text(if positive { "" } else { " NOT" }) +
       @pp.text(" ILIKE ") +
       right.pretty()
-    Expr::SubQuery(stmt) =>
+    SubQuery(stmt) =>
       @pp.parens(@pp.nest(@pp.hardline + stmt.pretty()) + @pp.hardline)
-    Expr::Exists(positive~, stmt) =>
+    Exists(positive~, stmt) =>
       (if positive { @pp.text("EXISTS (") } else { @pp.text("NOT EXISTS (") }) +
       @pp.hardline +
       @pp.nest(stmt.pretty()) +
       @pp.hardline +
       @pp.char(')')
-    Expr::Between(positive~, e, low, hi) =>
+    Between(positive~, e, low, hi) =>
       e.pretty() +
       @pp.text(if positive { " BETWEEN " } else { " NOT BETWEEN " }) +
       low.pretty() +
       @pp.text(" AND ") +
       hi.pretty()
-    Expr::Extract(field, expr) =>
+    Extract(field, expr) =>
       @pp.text("EXTRACT(") +
       field.pretty() +
       @pp.text(" FROM ") +
       expr.pretty() +
       @pp.char(')')
-    Expr::Case(case_expr) => case_expr.pretty()
-    Expr::InList(positive~, expr, items) =>
+    Case(case_expr) => case_expr.pretty()
+    InList(positive~, expr, items) =>
       expr.pretty() +
       @pp.text(if positive { " IN (" } else { " NOT IN (" }) +
       @pp.separate(@pp.text(", "), items.map(@pp.pretty)) +
       @pp.char(')')
-    Expr::InSubQuery(positive~, expr, sub_query) =>
+    InSubQuery(positive~, expr, sub_query) =>
       expr.pretty() +
       @pp.text(if positive { " IN (" } else { " NOT IN (" }) +
       @pp.nest(@pp.hardline + sub_query.pretty()) +
       @pp.hardline +
       @pp.char(')')
-    Expr::Substring(expr, from, for_expr) =>
+    Substring(expr, from, for_expr) =>
       @pp.text("SUBSTRING(") +
       expr.pretty() +
       (match from {
@@ -443,11 +442,11 @@ pub impl @pp.Pretty for Expr with fn pretty(self) {
         None => @pp.empty
       }) +
       @pp.char(')')
-    Expr::Placeholder(s) => @pp.text(s)
-    Expr::Array(arr) => arr.pretty()
-    Expr::CompoundFieldAccess(root, access_chain) =>
+    Placeholder(s) => @pp.text(s)
+    Array(arr) => arr.pretty()
+    CompoundFieldAccess(root, access_chain) =>
       root.pretty() + @pp.separate(@pp.empty, access_chain.map(@pp.pretty))
-    Expr::WindowFunction(name, dup, args, window_spec) =>
+    WindowFunction(name, dup, args, window_spec) =>
       @pp.text(name) +
       @pp.parens(
         (if dup is Some(dup) { dup.pretty() + @pp.space } else { @pp.empty }) +
@@ -461,7 +460,7 @@ pub impl @pp.Pretty for Expr with fn pretty(self) {
 
 ///|
 pub(all) enum Literal {
-  Integer(Int)
+  Integer(Int32)
   Double(Double) // TODO: float32
   String(String)
   Boolean(Bool)
@@ -471,11 +470,11 @@ pub(all) enum Literal {
 ///|
 pub impl @pp.Pretty for Literal with fn pretty(self) {
   match self {
-    Literal::Integer(value) => @pp.text("\{value}")
-    Literal::Double(value) => @pp.text("\{value}")
-    Literal::String(value) => @pp.text("'\{value}'")
-    Literal::Boolean(value) => @pp.text(if value { "TRUE" } else { "FALSE" })
-    Literal::Null => @pp.text("NULL")
+    Integer(value) => @pp.text("\{value}")
+    Double(value) => @pp.text("\{value}")
+    String(value) => @pp.text("'\{value}'")
+    Boolean(value) => @pp.text(if value { "TRUE" } else { "FALSE" })
+    Null => @pp.text("NULL")
   }
 }
 
@@ -504,8 +503,8 @@ pub(all) enum AccessExpr {
 ///|
 pub impl @pp.Pretty for AccessExpr with fn pretty(self) {
   match self {
-    AccessExpr::Dot(expr) => @pp.text(".") + expr.pretty()
-    AccessExpr::Subscript(subscript) => subscript.pretty()
+    Dot(expr) => @pp.text(".") + expr.pretty()
+    Subscript(subscript) => subscript.pretty()
   }
 }
 
@@ -519,8 +518,8 @@ pub(all) enum Subscript {
 ///|
 pub impl @pp.Pretty for Subscript with fn pretty(self) {
   match self {
-    Subscript::Index(index) => @pp.text("[") + index.pretty() + @pp.text("]")
-    Subscript::Slice(lower, upper, stride) =>
+    Index(index) => @pp.text("[") + index.pretty() + @pp.text("]")
+    Slice(lower, upper, stride) =>
       @pp.text("[") +
       (match lower {
         Some(l) => l.pretty()
@@ -592,28 +591,28 @@ pub(all) enum BinaryOperator {
 ///|
 pub impl @pp.Pretty for BinaryOperator with fn pretty(self) {
   match self {
-    BinaryOperator::Eq => @pp.text("=")
-    BinaryOperator::Neq => @pp.text("<>")
-    BinaryOperator::Lt => @pp.text("<")
-    BinaryOperator::Gt => @pp.text(">")
-    BinaryOperator::LtEq => @pp.text("<=")
-    BinaryOperator::GtEq => @pp.text(">=")
-    BinaryOperator::Spaceship => @pp.text("<=>")
-    BinaryOperator::Plus => @pp.text("+")
-    BinaryOperator::Minus => @pp.text("-")
-    BinaryOperator::Mul => @pp.text("*")
-    BinaryOperator::Div => @pp.text("/")
-    BinaryOperator::IntegerDiv => @pp.text(" DIV ")
-    BinaryOperator::Mod => @pp.text("%")
-    BinaryOperator::And => @pp.hardline + @pp.text("AND")
-    BinaryOperator::Or => @pp.hardline + @pp.text("OR")
+    Eq => @pp.text("=")
+    Neq => @pp.text("<>")
+    Lt => @pp.text("<")
+    Gt => @pp.text(">")
+    LtEq => @pp.text("<=")
+    GtEq => @pp.text(">=")
+    Spaceship => @pp.text("<=>")
+    Plus => @pp.text("+")
+    Minus => @pp.text("-")
+    Mul => @pp.text("*")
+    Div => @pp.text("/")
+    IntegerDiv => @pp.text(" DIV ")
+    Mod => @pp.text("%")
+    And => @pp.hardline + @pp.text("AND")
+    Or => @pp.hardline + @pp.text("OR")
     // PostgreSQL JSON operators
-    BinaryOperator::JsonExtract => @pp.text("->")
-    BinaryOperator::JsonExtractText => @pp.text("->>")
-    BinaryOperator::JsonExtractPath => @pp.text("#>")
-    BinaryOperator::JsonExtractPathText => @pp.text("#>>")
-    BinaryOperator::JsonContains => @pp.text("@>")
-    BinaryOperator::JsonContainedIn => @pp.text("<@")
+    JsonExtract => @pp.text("->")
+    JsonExtractText => @pp.text("->>")
+    JsonExtractPath => @pp.text("#>")
+    JsonExtractPathText => @pp.text("#>>")
+    JsonContains => @pp.text("@>")
+    JsonContainedIn => @pp.text("<@")
   }
 }
 
@@ -627,9 +626,9 @@ pub(all) enum UnaryOperator {
 ///|
 pub impl @pp.Pretty for UnaryOperator with fn pretty(self) {
   match self {
-    UnaryOperator::Plus => @pp.text("+")
-    UnaryOperator::Minus => @pp.text("-")
-    UnaryOperator::Not => @pp.text("NOT ")
+    Plus => @pp.text("+")
+    Minus => @pp.text("-")
+    Not => @pp.text("NOT ")
   }
 }
 
@@ -681,13 +680,13 @@ pub(all) enum TableFactor {
 ///|
 pub impl @pp.Pretty for TableFactor with fn pretty(self) {
   match self {
-    TableFactor::Column(name, alias_name) =>
+    Column(name, alias_name) =>
       name.pretty() +
       (match alias_name {
         Some(a) => a.pretty()
         None => @pp.empty
       })
-    TableFactor::SubQuery(stmt, alias_name) =>
+    SubQuery(stmt, alias_name) =>
       @pp.parens(@pp.nest(@pp.hardline + stmt.pretty()) + @pp.hardline) +
       (match alias_name {
         Some(a) => a.pretty()
@@ -731,15 +730,15 @@ pub impl @pp.Pretty for Join with fn pretty(self) {
   @pp.space +
   self.table_ref.pretty() +
   (match self.join_operator {
-    JoinOperator::Join(constraint) => constraint.pretty()
-    JoinOperator::Left(constraint) => constraint.pretty()
-    JoinOperator::Right(constraint) => constraint.pretty()
-    JoinOperator::Full(constraint) => constraint.pretty()
-    JoinOperator::Inner(constraint) => constraint.pretty()
-    JoinOperator::LeftOuter(constraint) => constraint.pretty()
-    JoinOperator::RightOuter(constraint) => constraint.pretty()
-    JoinOperator::FullOuter(constraint) => constraint.pretty()
-    JoinOperator::Cross => @pp.empty
+    Join(constraint) => constraint.pretty()
+    Left(constraint) => constraint.pretty()
+    Right(constraint) => constraint.pretty()
+    Full(constraint) => constraint.pretty()
+    Inner(constraint) => constraint.pretty()
+    LeftOuter(constraint) => constraint.pretty()
+    RightOuter(constraint) => constraint.pretty()
+    FullOuter(constraint) => constraint.pretty()
+    Cross => @pp.empty
   })
 }
 
@@ -759,15 +758,15 @@ pub(all) enum JoinOperator {
 ///|
 pub impl @pp.Pretty for JoinOperator with fn pretty(self) {
   match self {
-    JoinOperator::Join(_) => @pp.text("JOIN")
-    JoinOperator::Left(_) => @pp.text("LEFT JOIN")
-    JoinOperator::LeftOuter(_) => @pp.text("LEFT OUTER JOIN")
-    JoinOperator::Right(_) => @pp.text("RIGHT JOIN")
-    JoinOperator::RightOuter(_) => @pp.text("RIGHT OUTER JOIN")
-    JoinOperator::Full(_) => @pp.text("FULL JOIN")
-    JoinOperator::FullOuter(_) => @pp.text("FULL OUTER JOIN")
-    JoinOperator::Inner(_) => @pp.text("INNER JOIN")
-    JoinOperator::Cross => @pp.text("CROSS JOIN")
+    Join(_) => @pp.text("JOIN")
+    Left(_) => @pp.text("LEFT JOIN")
+    LeftOuter(_) => @pp.text("LEFT OUTER JOIN")
+    Right(_) => @pp.text("RIGHT JOIN")
+    RightOuter(_) => @pp.text("RIGHT OUTER JOIN")
+    Full(_) => @pp.text("FULL JOIN")
+    FullOuter(_) => @pp.text("FULL OUTER JOIN")
+    Inner(_) => @pp.text("INNER JOIN")
+    Cross => @pp.text("CROSS JOIN")
   }
 }
 
@@ -783,16 +782,15 @@ pub(all) enum JoinConstraint {
 ///|
 pub impl @pp.Pretty for JoinConstraint with fn pretty(self) {
   match self {
-    JoinConstraint::On(expr) =>
-      @pp.nest(@pp.hardline + @pp.text("ON ") + expr.pretty())
-    JoinConstraint::Using(cols) =>
+    On(expr) => @pp.nest(@pp.hardline + @pp.text("ON ") + expr.pretty())
+    Using(cols) =>
       @pp.nest(
         @pp.hardline +
         @pp.text("USING (") +
         @pp.separate(@pp.text(", "), cols.map(@pp.text)) +
         @pp.char(')'),
       )
-    JoinConstraint::Non => @pp.empty
+    Non => @pp.empty
   }
 }
 
@@ -807,9 +805,8 @@ pub(all) enum IntervalQualifier {
 ///|
 pub impl @pp.Pretty for IntervalQualifier with fn pretty(self) {
   match self {
-    IntervalQualifier::Single(field) => field.pretty()
-    IntervalQualifier::Range(from, to) =>
-      @pp.group(from.pretty() + @pp.text(" TO ") + to.pretty())
+    Single(field) => field.pretty()
+    Range(from, to) => @pp.group(from.pretty() + @pp.text(" TO ") + to.pretty())
   }
 }
 
@@ -818,7 +815,7 @@ struct PrimaryDatetimeField {
   // YEAR, MONTH, DAY, HOUR, MINUTE, SECOND
   field : DatetimeUnit
   // (3)
-  precision : Int?
+  precision : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -846,12 +843,12 @@ pub(all) enum DatetimeUnit {
 ///|
 pub impl @pp.Pretty for DatetimeUnit with fn pretty(self) {
   match self {
-    DatetimeUnit::Year => @pp.text("YEAR")
-    DatetimeUnit::Month => @pp.text("MONTH")
-    DatetimeUnit::Day => @pp.text("DAY")
-    DatetimeUnit::Hour => @pp.text("HOUR")
-    DatetimeUnit::Minute => @pp.text("MINUTE")
-    DatetimeUnit::Second => @pp.text("SECOND")
+    Year => @pp.text("YEAR")
+    Month => @pp.text("MONTH")
+    Day => @pp.text("DAY")
+    Hour => @pp.text("HOUR")
+    Minute => @pp.text("MINUTE")
+    Second => @pp.text("SECOND")
   }
 }
 
@@ -964,8 +961,8 @@ pub impl @pp.Pretty for WindowSpec with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for WindowFrameClause with fn pretty(self) {
   let units_text = match self.frame_units {
-    WindowFrameUnits::Rows => "ROWS"
-    WindowFrameUnits::Range => "RANGE"
+    Rows => "ROWS"
+    Range => "RANGE"
   }
   match self.frame_end {
     Some(end_bound) =>
@@ -981,11 +978,11 @@ pub impl @pp.Pretty for WindowFrameClause with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for WindowFrameBound with fn pretty(self) {
   match self {
-    WindowFrameBound::UnboundedPreceding => @pp.text("UNBOUNDED PRECEDING")
-    WindowFrameBound::UnboundedFollowing => @pp.text("UNBOUNDED FOLLOWING")
-    WindowFrameBound::CurrentRow => @pp.text("CURRENT ROW")
-    WindowFrameBound::Preceding(expr) => expr.pretty() + @pp.text(" PRECEDING")
-    WindowFrameBound::Following(expr) => expr.pretty() + @pp.text(" FOLLOWING")
+    UnboundedPreceding => @pp.text("UNBOUNDED PRECEDING")
+    UnboundedFollowing => @pp.text("UNBOUNDED FOLLOWING")
+    CurrentRow => @pp.text("CURRENT ROW")
+    Preceding(expr) => expr.pretty() + @pp.text(" PRECEDING")
+    Following(expr) => expr.pretty() + @pp.text(" FOLLOWING")
   }
 }
 
@@ -1019,7 +1016,7 @@ pub impl @pp.Pretty for CreateTableStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for CreateTableDefinition with fn pretty(self) {
   match self {
-    CreateTableDefinition::Columns(columns, constraints) =>
+    Columns(columns, constraints) =>
       @pp.text("(") +
       @pp.nest(
         @pp.hardline +
@@ -1037,7 +1034,7 @@ pub impl @pp.Pretty for CreateTableDefinition with fn pretty(self) {
       ) +
       @pp.hardline +
       @pp.text(")")
-    CreateTableDefinition::AsQuery(query) => @pp.text("AS ") + query.pretty()
+    AsQuery(query) => @pp.text("AS ") + query.pretty()
   }
 }
 
@@ -1061,11 +1058,11 @@ pub(all) enum DataType {
   Integer
   Smallint
   Bigint
-  Float(Int?)
+  Float(Int32?)
   Real
   Double
-  Char(Int)
-  Varchar(Int)
+  Char(Int32)
+  Varchar(Int32)
   Text
   Boolean
   Timestamp
@@ -1206,12 +1203,12 @@ pub impl @pp.Pretty for CreateIndexStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for IndexMethod with fn pretty(self) {
   match self {
-    IndexMethod::Btree => @pp.text("BTREE")
-    IndexMethod::Hash => @pp.text("HASH")
-    IndexMethod::Gin => @pp.text("GIN")
-    IndexMethod::Gist => @pp.text("GIST")
-    IndexMethod::Spgist => @pp.text("SPGIST")
-    IndexMethod::Brin => @pp.text("BRIN")
+    Btree => @pp.text("BTREE")
+    Hash => @pp.text("HASH")
+    Gin => @pp.text("GIN")
+    Gist => @pp.text("GIST")
+    Spgist => @pp.text("SPGIST")
+    Brin => @pp.text("BRIN")
   }
 }
 
@@ -1387,15 +1384,15 @@ pub(all) struct CreateSequenceStmt {
   /// TEMPORARY flag
   temporary : Bool
   /// INCREMENT BY value (default 1)
-  increment : Int?
+  increment : Int32?
   /// MINVALUE value or NO MINVALUE
   minvalue : SequenceLimit?
   /// MAXVALUE value or NO MAXVALUE  
   maxvalue : SequenceLimit?
   /// START WITH value (default 1)
-  start_with : Int?
+  start_with : Int32?
   /// CACHE value
-  cache : Int?
+  cache : Int32?
   /// CYCLE or NO CYCLE (default NO CYCLE)
   cycle : Bool?
   /// OWNED BY table.column or OWNED BY NONE
@@ -1406,7 +1403,7 @@ pub(all) struct CreateSequenceStmt {
 /// Sequence limit specification
 pub(all) enum SequenceLimit {
   /// MINVALUE/MAXVALUE value
-  Value(Int)
+  Value(Int32)
   /// NO MINVALUE/NO MAXVALUE
   NoLimit
 } derive(Eq, Debug)
@@ -1432,15 +1429,13 @@ pub impl @pp.Pretty for CreateSequenceStmt with fn pretty(self) {
     None => @pp.empty
   }) +
   (match self.minvalue {
-    Some(SequenceLimit::Value(val)) =>
-      @pp.text(" MINVALUE ") + @pp.text(val.to_string())
-    Some(SequenceLimit::NoLimit) => @pp.text(" NO MINVALUE")
+    Some(Value(val)) => @pp.text(" MINVALUE ") + @pp.text(val.to_string())
+    Some(NoLimit) => @pp.text(" NO MINVALUE")
     None => @pp.empty
   }) +
   (match self.maxvalue {
-    Some(SequenceLimit::Value(val)) =>
-      @pp.text(" MAXVALUE ") + @pp.text(val.to_string())
-    Some(SequenceLimit::NoLimit) => @pp.text(" NO MAXVALUE")
+    Some(Value(val)) => @pp.text(" MAXVALUE ") + @pp.text(val.to_string())
+    Some(NoLimit) => @pp.text(" NO MAXVALUE")
     None => @pp.empty
   }) +
   (match self.start_with {
@@ -1457,9 +1452,9 @@ pub impl @pp.Pretty for CreateSequenceStmt with fn pretty(self) {
     None => @pp.empty
   }) +
   (match self.owned_by {
-    Some(SequenceOwnedBy::Column(table, column)) =>
+    Some(Column(table, column)) =>
       @pp.text(" OWNED BY ") + table.pretty() + @pp.text(".") + @pp.text(column)
-    Some(SequenceOwnedBy::ByNone) => @pp.text(" OWNED BY NONE")
+    Some(ByNone) => @pp.text(" OWNED BY NONE")
     None => @pp.empty
   })
 }
@@ -1467,26 +1462,25 @@ pub impl @pp.Pretty for CreateSequenceStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for SequenceLimit with fn pretty(self) {
   match self {
-    SequenceLimit::Value(val) => @pp.text(val.to_string())
-    SequenceLimit::NoLimit => @pp.text("NO LIMIT")
+    Value(val) => @pp.text(val.to_string())
+    NoLimit => @pp.text("NO LIMIT")
   }
 }
 
 ///|
 pub impl @pp.Pretty for SequenceOwnedBy with fn pretty(self) {
   match self {
-    SequenceOwnedBy::Column(table, column) =>
-      table.pretty() + @pp.text(".") + @pp.text(column)
-    SequenceOwnedBy::ByNone => @pp.text("NONE")
+    Column(table, column) => table.pretty() + @pp.text(".") + @pp.text(column)
+    ByNone => @pp.text("NONE")
   }
 }
 
 ///|
 pub impl @pp.Pretty for FunctionParameter with fn pretty(self) {
   (match self.mode {
-    Some(ParameterMode::In) => @pp.text("IN ")
-    Some(ParameterMode::Out) => @pp.text("OUT ")
-    Some(ParameterMode::InOut) => @pp.text("INOUT ")
+    Some(In) => @pp.text("IN ")
+    Some(Out) => @pp.text("OUT ")
+    Some(InOut) => @pp.text("INOUT ")
     None => @pp.empty
   }) +
   @pp.text(self.name) +
@@ -1497,9 +1491,9 @@ pub impl @pp.Pretty for FunctionParameter with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for ParameterMode with fn pretty(self) {
   match self {
-    ParameterMode::In => @pp.text("IN")
-    ParameterMode::Out => @pp.text("OUT")
-    ParameterMode::InOut => @pp.text("INOUT")
+    In => @pp.text("IN")
+    Out => @pp.text("OUT")
+    InOut => @pp.text("INOUT")
   }
 }
 
@@ -1525,8 +1519,8 @@ pub(all) enum DuplicateTreatment {
 ///|
 pub impl @pp.Pretty for DuplicateTreatment with fn pretty(self) {
   match self {
-    DuplicateTreatment::Distinct => @pp.text("DISTINCT")
-    DuplicateTreatment::All => @pp.text("ALL")
+    Distinct => @pp.text("DISTINCT")
+    All => @pp.text("ALL")
   }
 }
 
@@ -1589,15 +1583,15 @@ pub impl @pp.Pretty for ObjectName with fn pretty(self) {
 
 ///|
 pub(all) enum Top {
-  Constant(Int)
+  Constant(Int32)
   Expr(Expr)
 } derive(Eq, Debug)
 
 ///|
 pub impl @pp.Pretty for Top with fn pretty(self) {
   match self {
-    Top::Constant(value) => @pp.text(" TOP \{value}")
-    Top::Expr(expr) => @pp.text(" TOP (") + expr.pretty() + @pp.text(")")
+    Constant(value) => @pp.text(" TOP \{value}")
+    Expr(expr) => @pp.text(" TOP (") + expr.pretty() + @pp.text(")")
   }
 }
 
@@ -1619,7 +1613,7 @@ pub(all) struct InsertStmt {
 pub impl @pp.Pretty for InsertStmt with fn pretty(self) {
   // Handle REPLACE vs INSERT OR REPLACE
   (match self.or {
-    Some(SqliteOnConflict::Replace) => @pp.text("REPLACE INTO ")
+    Some(Replace) => @pp.text("REPLACE INTO ")
     Some(conflict) =>
       @pp.text("INSERT ") + conflict.pretty() + @pp.text(" INTO ")
     None => @pp.text("INSERT INTO ")
@@ -1650,7 +1644,7 @@ pub(all) enum InsertSource {
 ///|
 pub impl @pp.Pretty for InsertSource with fn pretty(self) {
   match self {
-    InsertSource::Values(rows) =>
+    Values(rows) =>
       @pp.text("VALUES ") +
       @pp.separate(
         @pp.text(", "),
@@ -1658,7 +1652,7 @@ pub impl @pp.Pretty for InsertSource with fn pretty(self) {
           @pp.parens(@pp.separate(@pp.text(", "), row.map(@pp.pretty)))
         }),
       )
-    InsertSource::Query(query) => query.pretty()
+    Query(query) => query.pretty()
   }
 }
 
@@ -1805,8 +1799,8 @@ pub impl @pp.Pretty for MergeStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for MergeSource with fn pretty(self) {
   match self {
-    MergeSource::Table(table) => table.pretty()
-    MergeSource::Query(query) =>
+    Table(table) => table.pretty()
+    Query(query) =>
       @pp.parens(@pp.nest(@pp.hardline + query.pretty()) + @pp.hardline)
   }
 }
@@ -1826,15 +1820,15 @@ pub impl @pp.Pretty for MergeWhenClause with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for MergeMatchType with fn pretty(self) {
   match self {
-    MergeMatchType::Matched => @pp.text("MATCHED")
-    MergeMatchType::NotMatched => @pp.text("NOT MATCHED")
+    Matched => @pp.text("MATCHED")
+    NotMatched => @pp.text("NOT MATCHED")
   }
 }
 
 ///|
 pub impl @pp.Pretty for MergeAction with fn pretty(self) {
   match self {
-    MergeAction::Insert(columns, values) =>
+    Insert(columns, values) =>
       @pp.text("INSERT ") +
       (if columns.length() > 0 {
         @pp.parens(@pp.separate(@pp.text(", "), columns.map(@pp.text))) +
@@ -1844,10 +1838,10 @@ pub impl @pp.Pretty for MergeAction with fn pretty(self) {
       }) +
       @pp.text("VALUES ") +
       @pp.parens(@pp.separate(@pp.text(", "), values.map(@pp.pretty)))
-    MergeAction::Update(assignments) =>
+    Update(assignments) =>
       @pp.text("UPDATE SET ") +
       @pp.separate(@pp.text(", "), assignments.map(@pp.pretty))
-    MergeAction::Delete => @pp.text("DELETE")
+    Delete => @pp.text("DELETE")
   }
 }
 
@@ -1929,7 +1923,7 @@ pub impl @pp.Pretty for AlterTableStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for AlterTableOperation with fn pretty(self) {
   match self {
-    AlterTableOperation::DropColumn(column_name, if_exists) =>
+    DropColumn(column_name, if_exists) =>
       @pp.text("DROP COLUMN ") +
       (if if_exists { @pp.text("IF EXISTS ") } else { @pp.empty }) +
       @pp.text(column_name)
@@ -1979,15 +1973,14 @@ pub impl @pp.Pretty for AlterIndexStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for AlterIndexOperation with fn pretty(self) {
   match self {
-    AlterIndexOperation::RenameTo(new_name) =>
-      @pp.text("RENAME TO ") + @pp.text(new_name)
-    AlterIndexOperation::SetTablespace(tablespace) =>
+    RenameTo(new_name) => @pp.text("RENAME TO ") + @pp.text(new_name)
+    SetTablespace(tablespace) =>
       @pp.text("SET TABLESPACE ") + @pp.text(tablespace)
-    AlterIndexOperation::Reset(params) =>
+    Reset(params) =>
       @pp.text("RESET (") +
       @pp.separate(@pp.text(", "), params.map(@pp.text)) +
       @pp.text(")")
-    AlterIndexOperation::Set(params) =>
+    Set(params) =>
       @pp.text("SET (") +
       @pp.separate(@pp.text(", "), params.map(@pp.pretty)) +
       @pp.text(")")
@@ -2050,12 +2043,12 @@ pub impl @pp.Pretty for ShowStmt with fn pretty(self) {
     Some(obj) =>
       // For CREATE statements, object comes directly after type (no FROM)
       match self.show_type {
-        ShowType::CreateTable
-        | ShowType::CreateView
-        | ShowType::CreateFunction
-        | ShowType::CreateProcedure
-        | ShowType::CreateEvent
-        | ShowType::CreateTrigger => @pp.space + obj.pretty()
+        CreateTable
+        | CreateView
+        | CreateFunction
+        | CreateProcedure
+        | CreateEvent
+        | CreateTrigger => @pp.space + obj.pretty()
         _ => @pp.space + @pp.text("FROM ") + obj.pretty()
       }
     None => @pp.empty
@@ -2069,30 +2062,29 @@ pub impl @pp.Pretty for ShowStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for ShowType with fn pretty(self) {
   match self {
-    ShowType::Tables => @pp.text("TABLES")
-    ShowType::Columns => @pp.text("COLUMNS")
-    ShowType::Status => @pp.text("STATUS")
-    ShowType::Databases => @pp.text("DATABASES")
-    ShowType::Schemas => @pp.text("SCHEMAS")
-    ShowType::Variables => @pp.text("VARIABLES")
-    ShowType::Processlist => @pp.text("PROCESSLIST")
-    ShowType::Grants => @pp.text("GRANTS")
-    ShowType::Functions => @pp.text("FUNCTIONS")
-    ShowType::CreateTable => @pp.text("CREATE TABLE")
-    ShowType::CreateView => @pp.text("CREATE VIEW")
-    ShowType::CreateFunction => @pp.text("CREATE FUNCTION")
-    ShowType::CreateProcedure => @pp.text("CREATE PROCEDURE")
-    ShowType::CreateEvent => @pp.text("CREATE EVENT")
-    ShowType::CreateTrigger => @pp.text("CREATE TRIGGER")
+    Tables => @pp.text("TABLES")
+    Columns => @pp.text("COLUMNS")
+    Status => @pp.text("STATUS")
+    Databases => @pp.text("DATABASES")
+    Schemas => @pp.text("SCHEMAS")
+    Variables => @pp.text("VARIABLES")
+    Processlist => @pp.text("PROCESSLIST")
+    Grants => @pp.text("GRANTS")
+    Functions => @pp.text("FUNCTIONS")
+    CreateTable => @pp.text("CREATE TABLE")
+    CreateView => @pp.text("CREATE VIEW")
+    CreateFunction => @pp.text("CREATE FUNCTION")
+    CreateProcedure => @pp.text("CREATE PROCEDURE")
+    CreateEvent => @pp.text("CREATE EVENT")
+    CreateTrigger => @pp.text("CREATE TRIGGER")
   }
 }
 
 ///|
 pub impl @pp.Pretty for ShowFilter with fn pretty(self) {
   match self {
-    ShowFilter::Like(pattern) =>
-      @pp.text("LIKE '") + @pp.text(pattern) + @pp.text("'")
-    ShowFilter::Where(expr) => @pp.text("WHERE ") + expr.pretty()
+    Like(pattern) => @pp.text("LIKE '") + @pp.text(pattern) + @pp.text("'")
+    Where(expr) => @pp.text("WHERE ") + expr.pretty()
   }
 }
 
@@ -2124,10 +2116,10 @@ pub(all) struct SetAssignment {
 pub impl @pp.Pretty for SetStmt with fn pretty(self) {
   @pp.text("SET ") +
   (match self.scope {
-    SetScope::Global => @pp.text("GLOBAL ")
-    SetScope::Session => @pp.text("SESSION ")
-    SetScope::UserVar => @pp.empty
-    SetScope::Local => @pp.empty
+    Global => @pp.text("GLOBAL ")
+    Session => @pp.text("SESSION ")
+    UserVar => @pp.empty
+    Local => @pp.empty
   }) +
   @pp.separate(@pp.text(", "), self.assignments.map(fn(a) { a.pretty() }))
 }
@@ -2261,7 +2253,7 @@ pub impl @pp.Pretty for CopyStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for CopySource with fn pretty(self) {
   match self {
-    CopySource::Table(table_name, columns) =>
+    Table(table_name, columns) =>
       table_name.pretty() +
       (match columns {
         Some(col_list) if col_list.length() > 0 =>
@@ -2269,7 +2261,7 @@ pub impl @pp.Pretty for CopySource with fn pretty(self) {
           @pp.parens(@pp.separate(@pp.text(", "), col_list.map(@pp.text)))
         _ => @pp.empty
       })
-    CopySource::Query(query) =>
+    Query(query) =>
       @pp.parens(@pp.nest(@pp.hardline + query.pretty()) + @pp.hardline)
   }
 }
@@ -2277,19 +2269,18 @@ pub impl @pp.Pretty for CopySource with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for CopyDirection with fn pretty(self) {
   match self {
-    CopyDirection::To => @pp.text("TO")
-    CopyDirection::From => @pp.text("FROM")
+    To => @pp.text("TO")
+    From => @pp.text("FROM")
   }
 }
 
 ///|
 pub impl @pp.Pretty for CopyTarget with fn pretty(self) {
   match self {
-    CopyTarget::File(filename) =>
-      @pp.text("'") + @pp.text(filename) + @pp.text("'")
-    CopyTarget::Stdin => @pp.text("STDIN")
-    CopyTarget::Stdout => @pp.text("STDOUT")
-    CopyTarget::Program(command) =>
+    File(filename) => @pp.text("'") + @pp.text(filename) + @pp.text("'")
+    Stdin => @pp.text("STDIN")
+    Stdout => @pp.text("STDOUT")
+    Program(command) =>
       @pp.text("PROGRAM '") + @pp.text(command) + @pp.text("'")
   }
 }
@@ -2297,29 +2288,27 @@ pub impl @pp.Pretty for CopyTarget with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for CopyOption with fn pretty(self) {
   match self {
-    CopyOption::Format(format) => @pp.text("FORMAT ") + format.pretty()
-    CopyOption::Delimiter(delim) =>
+    Format(format) => @pp.text("FORMAT ") + format.pretty()
+    Delimiter(delim) =>
       @pp.text("DELIMITER '") + @pp.text(delim) + @pp.text("'")
-    CopyOption::Null(null_str) =>
-      @pp.text("NULL '") + @pp.text(null_str) + @pp.text("'")
-    CopyOption::Header(Some(true)) => @pp.text("HEADER true")
-    CopyOption::Header(Some(false)) => @pp.text("HEADER false")
-    CopyOption::Header(None) => @pp.text("HEADER")
-    CopyOption::Quote(quote_char) =>
+    Null(null_str) => @pp.text("NULL '") + @pp.text(null_str) + @pp.text("'")
+    Header(Some(true)) => @pp.text("HEADER true")
+    Header(Some(false)) => @pp.text("HEADER false")
+    Header(None) => @pp.text("HEADER")
+    Quote(quote_char) =>
       @pp.text("QUOTE '") + @pp.text(quote_char) + @pp.text("'")
-    CopyOption::Escape(escape_char) =>
+    Escape(escape_char) =>
       @pp.text("ESCAPE '") + @pp.text(escape_char) + @pp.text("'")
-    CopyOption::ForceQuote(force_quote) =>
-      @pp.text("FORCE_QUOTE ") + force_quote.pretty()
-    CopyOption::ForceNotNull(columns) =>
+    ForceQuote(force_quote) => @pp.text("FORCE_QUOTE ") + force_quote.pretty()
+    ForceNotNull(columns) =>
       @pp.text("FORCE_NOT_NULL (") +
       @pp.separate(@pp.text(", "), columns.map(@pp.text)) +
       @pp.text(")")
-    CopyOption::ForceNull(columns) =>
+    ForceNull(columns) =>
       @pp.text("FORCE_NULL (") +
       @pp.separate(@pp.text(", "), columns.map(@pp.text)) +
       @pp.text(")")
-    CopyOption::Encoding(encoding) =>
+    Encoding(encoding) =>
       @pp.text("ENCODING '") + @pp.text(encoding) + @pp.text("'")
   }
 }
@@ -2327,17 +2316,17 @@ pub impl @pp.Pretty for CopyOption with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for CopyFormat with fn pretty(self) {
   match self {
-    CopyFormat::Csv => @pp.text("CSV")
-    CopyFormat::Text => @pp.text("TEXT")
-    CopyFormat::Binary => @pp.text("BINARY")
+    Csv => @pp.text("CSV")
+    Text => @pp.text("TEXT")
+    Binary => @pp.text("BINARY")
   }
 }
 
 ///|
 pub impl @pp.Pretty for CopyForceQuote with fn pretty(self) {
   match self {
-    CopyForceQuote::All => @pp.text("*")
-    CopyForceQuote::Columns(columns) =>
+    All => @pp.text("*")
+    Columns(columns) =>
       @pp.parens(@pp.separate(@pp.text(", "), columns.map(@pp.text)))
   }
 }
@@ -2354,10 +2343,10 @@ pub(all) enum OnInsert {
 ///|
 pub impl @pp.Pretty for OnInsert with fn pretty(self) {
   match self {
-    OnInsert::DuplicateKeyUpdate(assignments) =>
+    DuplicateKeyUpdate(assignments) =>
       @pp.text("ON DUPLICATE KEY UPDATE ") +
       @pp.separate(@pp.text(", "), assignments.map(@pp.pretty))
-    OnInsert::OnConflict(conflict_clause) =>
+    OnConflict(conflict_clause) =>
       @pp.text("ON CONFLICT ") + conflict_clause.pretty()
   }
 }
@@ -2404,11 +2393,11 @@ pub impl @pp.Pretty for OnConflictClause with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for ConflictTarget with fn pretty(self) {
   match self {
-    ConflictTarget::Columns(columns) =>
+    Columns(columns) =>
       @pp.parens(@pp.separate(@pp.text(", "), columns.map(@pp.text)))
-    ConflictTarget::OnConstraint(constraint_name) =>
+    OnConstraint(constraint_name) =>
       @pp.text("ON CONSTRAINT ") + @pp.text(constraint_name)
-    ConflictTarget::OnExpression(expr, where_condition) =>
+    OnExpression(expr, where_condition) =>
       @pp.parens(expr.pretty()) +
       (match where_condition {
         Some(condition) => @pp.text(" WHERE ") + condition.pretty()
@@ -2420,8 +2409,8 @@ pub impl @pp.Pretty for ConflictTarget with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for ConflictAction with fn pretty(self) {
   match self {
-    ConflictAction::DoNothing => @pp.text("DO NOTHING")
-    ConflictAction::DoUpdate(assignments, where_condition) =>
+    DoNothing => @pp.text("DO NOTHING")
+    DoUpdate(assignments, where_condition) =>
       @pp.text("DO UPDATE SET ") +
       @pp.separate(@pp.text(", "), assignments.map(@pp.pretty)) +
       (match where_condition {
@@ -2445,11 +2434,11 @@ pub(all) enum SqliteOnConflict {
 ///|
 pub impl @pp.Pretty for SqliteOnConflict with fn pretty(self) {
   match self {
-    SqliteOnConflict::Rollback => @pp.text("OR ROLLBACK")
-    SqliteOnConflict::Abort => @pp.text("OR ABORT")
-    SqliteOnConflict::Fail => @pp.text("OR FAIL")
-    SqliteOnConflict::Ignore => @pp.text("OR IGNORE")
-    SqliteOnConflict::Replace => @pp.text("OR REPLACE")
+    Rollback => @pp.text("OR ROLLBACK")
+    Abort => @pp.text("OR ABORT")
+    Fail => @pp.text("OR FAIL")
+    Ignore => @pp.text("OR IGNORE")
+    Replace => @pp.text("OR REPLACE")
   }
 }
 
@@ -2577,44 +2566,44 @@ pub impl @pp.Pretty for GrantStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for Privilege with fn pretty(self) {
   match self {
-    Privilege::Select(cols) =>
+    Select(cols) =>
       @pp.text("SELECT") +
       (match cols {
         Some(column_names) if column_names.length() > 0 =>
           @pp.parens(@pp.separate(@pp.text(", "), column_names.map(@pp.text)))
         _ => @pp.empty
       })
-    Privilege::Insert(cols) =>
+    Insert(cols) =>
       @pp.text("INSERT") +
       (match cols {
         Some(column_names) if column_names.length() > 0 =>
           @pp.parens(@pp.separate(@pp.text(", "), column_names.map(@pp.text)))
         _ => @pp.empty
       })
-    Privilege::Update(cols) =>
+    Update(cols) =>
       @pp.text("UPDATE") +
       (match cols {
         Some(column_names) if column_names.length() > 0 =>
           @pp.parens(@pp.separate(@pp.text(", "), column_names.map(@pp.text)))
         _ => @pp.empty
       })
-    Privilege::Delete => @pp.text("DELETE")
-    Privilege::References(cols) =>
+    Delete => @pp.text("DELETE")
+    References(cols) =>
       @pp.text("REFERENCES") +
       (match cols {
         Some(column_names) if column_names.length() > 0 =>
           @pp.parens(@pp.separate(@pp.text(", "), column_names.map(@pp.text)))
         _ => @pp.empty
       })
-    Privilege::Create => @pp.text("CREATE")
-    Privilege::Drop => @pp.text("DROP")
-    Privilege::Alter => @pp.text("ALTER")
-    Privilege::Index => @pp.text("INDEX")
-    Privilege::All => @pp.text("ALL PRIVILEGES")
-    Privilege::Usage => @pp.text("USAGE")
-    Privilege::Execute => @pp.text("EXECUTE")
-    Privilege::Connect => @pp.text("CONNECT")
-    Privilege::Temporary => @pp.text("TEMPORARY")
+    Create => @pp.text("CREATE")
+    Drop => @pp.text("DROP")
+    Alter => @pp.text("ALTER")
+    Index => @pp.text("INDEX")
+    All => @pp.text("ALL PRIVILEGES")
+    Usage => @pp.text("USAGE")
+    Execute => @pp.text("EXECUTE")
+    Connect => @pp.text("CONNECT")
+    Temporary => @pp.text("TEMPORARY")
   }
 }
 
@@ -2648,8 +2637,8 @@ pub impl @pp.Pretty for RevokeStmt with fn pretty(self) {
   @pp.text(" FROM ") +
   @pp.separate(@pp.text(", "), self.grantees.map(@pp.text)) +
   (match self.cascade {
-    Some(RevokeOption::Restrict) => @pp.text(" RESTRICT")
-    Some(RevokeOption::Cascade) => @pp.text(" CASCADE")
+    Some(Restrict) => @pp.text(" RESTRICT")
+    Some(Cascade) => @pp.text(" CASCADE")
     None => @pp.empty
   })
 }
@@ -2657,8 +2646,8 @@ pub impl @pp.Pretty for RevokeStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for RevokeOption with fn pretty(self) {
   match self {
-    RevokeOption::Restrict => @pp.text("RESTRICT")
-    RevokeOption::Cascade => @pp.text("CASCADE")
+    Restrict => @pp.text("RESTRICT")
+    Cascade => @pp.text("CASCADE")
   }
 }
 
@@ -2679,7 +2668,7 @@ pub(all) struct LoadDataStmt {
   /// [LINES [STARTING BY 'string'] [TERMINATED BY 'string']]
   lines_options : LoadDataLinesOptions?
   /// [IGNORE number LINES]
-  ignore_lines : Int?
+  ignore_lines : Int32?
   /// [(column_name_or_user_var, ...)]
   columns : Array[String]?
   /// [SET column_name = expr, ...]
@@ -2769,8 +2758,8 @@ pub impl @pp.Pretty for LoadDataStmt with fn pretty(self) {
 ///|
 pub impl @pp.Pretty for LoadDataDuplicateHandling with fn pretty(self) {
   match self {
-    LoadDataDuplicateHandling::Replace => @pp.text("REPLACE")
-    LoadDataDuplicateHandling::Ignore => @pp.text("IGNORE")
+    Replace => @pp.text("REPLACE")
+    Ignore => @pp.text("IGNORE")
   }
 }
 
@@ -2850,7 +2839,7 @@ pub impl @pp.Pretty for PrepareStmt with fn pretty(self) {
   }) +
   @pp.text(" AS ") +
   (match self.statement {
-    Statement::Query(stmt) => stmt.pretty()
+    Query(stmt) => stmt.pretty()
     CreateTable(stmt) => stmt.pretty()
     CreateView(stmt) => stmt.pretty()
     CreateIndex(stmt) => stmt.pretty()

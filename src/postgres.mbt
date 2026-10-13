@@ -56,10 +56,10 @@ pub impl Dialect for Postgres with fn parse_statement(
   match tokens {
     [Keyword(Listen), Identifier(channel), Semicolon, .. rest] =>
       // PostgreSQL LISTEN statement
-      Some((Statement::Listen(channel), rest))
+      Some((Listen(channel), rest))
     [Keyword(Notify), Identifier(channel), Semicolon, .. rest] =>
       // PostgreSQL NOTIFY statement without payload
-      Some((Statement::Notify(channel, None), rest))
+      Some((Notify(channel, None), rest))
     [
       Keyword(Notify),
       Identifier(channel),
@@ -69,7 +69,7 @@ pub impl Dialect for Postgres with fn parse_statement(
       .. rest,
     ] =>
       // PostgreSQL NOTIFY statement with payload
-      Some((Statement::Notify(channel, Some(payload)), rest))
+      Some((Notify(channel, Some(payload)), rest))
     _ => None // Fall back to generic parsing
   }
 }

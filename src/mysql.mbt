@@ -74,16 +74,16 @@ pub impl Dialect for MySQL with fn parse_statement(
       } else {
         tokens
       }
-      Some((Statement::LoadData(load_data_stmt), tokens))
+      Some((LoadData(load_data_stmt), tokens))
     }
     [Keyword(Lock), Keyword(Tables), Identifier(table_name), Semicolon, .. rest] => {
       // MySQL LOCK TABLES statement
       let table = ObjectName::{ parts: [table_name], }
-      Some((Statement::LockTables([table]), rest))
+      Some((LockTables([table]), rest))
     }
     [Keyword(Unlock), Keyword(Tables), Semicolon, .. rest] =>
       // MySQL UNLOCK TABLES statement
-      Some((Statement::UnlockTables, rest))
+      Some((UnlockTables, rest))
     _ => None // Fall back to generic parsing
   }
 }

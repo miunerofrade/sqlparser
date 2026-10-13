@@ -108,11 +108,11 @@ fn Parser::parse_rollback_statement(
   // Parse optional TO [SAVEPOINT] savepoint_name
   let tokens = match tokens {
     [Keyword(To), Keyword(Savepoint), Identifier(name), .. tokens] => {
-      savepoint = Option::Some(name)
+      savepoint = Some(name)
       tokens
     }
     [Keyword(To), Identifier(name), .. tokens] => {
-      savepoint = Option::Some(name)
+      savepoint = Some(name)
       tokens
     }
     _ => tokens

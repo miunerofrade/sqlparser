@@ -53,7 +53,7 @@ priv struct Lexer {
 
 ///|
 pub fn tokenize(
-  dialect? : &Dialect = MySQL::{ },
+  dialect~ : &Dialect = MySQL::{ },
   input : String,
 ) -> Array[Token] raise LexerError {
   let lexer = Lexer::{ dialect, }
@@ -145,9 +145,9 @@ fn skip_whitespace(input : StringView) -> StringView {
 ///|
 fn read_while(
   input : StringView,
-  idx : Int,
+  idx : Int32,
   predicate : (Char) -> Bool,
-) -> (Int, StringView) {
+) -> (Int32, StringView) {
   for input = input, idx = idx {
     match input {
       [c, .. rest] if predicate(c) => continue rest, idx + 1
@@ -190,10 +190,8 @@ fn Lexer::read_identifier_or_keyword(
     None =>
       // Then try common keywords and boolean literals
       match word {
-        "true" if self.dialect.supports_boolean_literals() =>
-          Token::Boolean(true)
-        "false" if self.dialect.supports_boolean_literals() =>
-          Token::Boolean(false)
+        "true" if self.dialect.supports_boolean_literals() => Boolean(true)
+        "false" if self.dialect.supports_boolean_literals() => Boolean(false)
         "select" => Keyword(Select)
         "from" => Keyword(From)
         "where" => Keyword(Where)
@@ -403,7 +401,7 @@ fn Lexer::read_identifier_or_keyword(
         "force_null" => Keyword(ForceNull)
         "encoding" => Keyword(Encoding)
         // NOTE: Removed LOAD DATA keywords from common keywords - they are now MySQL-specific
-        word => Token::Identifier(word.to_owned())
+        word => Identifier(word.to_owned())
       }
   }
   (token, rest)
@@ -429,7 +427,7 @@ fn Lexer::read_dollar_placeholder(
   // Read the number part
   let (idx, rest) = read_while(input, 0, c => c.is_ascii_digit())
   let placeholder = "$" + input.view(start_offset=0, end_offset=idx).to_owned()
-  (Token::Placeholder(placeholder), rest)
+  (Placeholder(placeholder), rest)
 }
 
 ///|
@@ -447,7 +445,7 @@ fn Lexer::read_colon_parameter(
   // Read the parameter name part
   let (idx, rest) = read_while(input, 0, is_ascii_alphabetic_or_digit)
   let placeholder = ":" + input.view(start_offset=0, end_offset=idx).to_owned()
-  (Token::Placeholder(placeholder), rest)
+  (Placeholder(placeholder), rest)
 }
 
 ///|
@@ -466,7 +464,7 @@ fn Lexer::read_at_parameter(
   // Read the parameter name part
   let (idx, rest) = read_while(input, 0, is_ascii_alphabetic_or_digit)
   let placeholder = "@" + input.view(start_offset=0, end_offset=idx).to_owned()
-  (Token::Placeholder(placeholder), rest)
+  (Placeholder(placeholder), rest)
 }
 
 ///|
@@ -510,7 +508,7 @@ fn Lexer::read_single_quoted_string(
         result.write_char(c)
         continue rest
       }
-      [] => raise LexerError::UnterminatedString
+      [] => raise UnterminatedString
     }
   }
   (StringLiteral(result.to_string()), rest)
@@ -553,7 +551,7 @@ fn Lexer::read_double_quoted_string(
         result.write_char(c)
         continue rest
       }
-      [] => raise LexerError::UnterminatedString
+      [] => raise UnterminatedString
     }
   }
   (StringLiteral(result.to_string()), rest)
@@ -584,7 +582,7 @@ fn Lexer::read_backtick_quoted_identifier(
         result.write_char(c)
         continue rest
       }
-      [] => raise LexerError::UnterminatedString
+      [] => raise UnterminatedString
     }
   }
   (Identifier(result.to_string()), rest)

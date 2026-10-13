@@ -35,20 +35,20 @@ fn Parser::expect_token(
   match tokens {
     [token, .. tokens] if token == expected => tokens
     [token, .. _tokens] => raise UnexpectedTokenError(token, expected)
-    [] => raise UnexpectedTokenError(Token::Eof, expected)
+    [] => raise UnexpectedTokenError(Eof, expected)
   }
 }
 
 ///|
 pub fn parse(
   tokens : ArrayView[Token],
-  dialect? : &Dialect = MySQL::{ },
+  dialect~ : &Dialect = MySQL::{ },
 ) -> Array[Statement] raise ParserError {
   let parser = Parser::{ dialect, }
   let statements = []
   for tokens = tokens {
     match tokens {
-      [Token::Eof] => break
+      [Eof] => break
       [] => break
       tokens => {
         let (stmt, tokens) = parser.parse_statement(tokens)
@@ -75,129 +75,99 @@ fn Parser::parse_statement(
     [Keyword(Select), .. _rest] =>
       self.parse_query(tokens).map(stmt => Statement::Query(stmt))
     [Keyword(With), .. _rest] =>
-      self.parse_query(tokens).map(stmt => Statement::Query(stmt))
+      self.parse_query(tokens).map(stmt => Query(stmt))
     [Keyword(Show), .. _rest] =>
-      self.parse_show_statement(tokens).map(stmt => Statement::Show(stmt))
+      self.parse_show_statement(tokens).map(stmt => Show(stmt))
     [Keyword(Set), .. _rest] =>
-      self.parse_set_statement(tokens).map(stmt => Statement::Set(stmt))
+      self.parse_set_statement(tokens).map(stmt => Set(stmt))
     [Keyword(Create), Keyword(Table), .. _rest] =>
-      self
-      .parse_create_table_statement(tokens)
-      .map(stmt => Statement::CreateTable(stmt))
+      self.parse_create_table_statement(tokens).map(stmt => CreateTable(stmt))
     [Keyword(Create), Keyword(View), .. _rest] =>
-      self
-      .parse_create_view_statement(tokens)
-      .map(stmt => Statement::CreateView(stmt))
+      self.parse_create_view_statement(tokens).map(stmt => CreateView(stmt))
     [Keyword(Create), Keyword(Index), .. _rest] =>
-      self
-      .parse_create_index_statement(tokens)
-      .map(stmt => Statement::CreateIndex(stmt))
+      self.parse_create_index_statement(tokens).map(stmt => CreateIndex(stmt))
     [Keyword(Create), Keyword(Unique), Keyword(Index), .. _rest] =>
-      self
-      .parse_create_index_statement(tokens)
-      .map(stmt => Statement::CreateIndex(stmt))
+      self.parse_create_index_statement(tokens).map(stmt => CreateIndex(stmt))
     [Keyword(Create), Keyword(Database), .. _rest] =>
       self
       .parse_create_database_statement(tokens)
-      .map(stmt => Statement::CreateDatabase(stmt))
+      .map(stmt => CreateDatabase(stmt))
     [Keyword(Create), Keyword(Schema), .. _rest] =>
-      self
-      .parse_create_schema_statement(tokens)
-      .map(stmt => Statement::CreateSchema(stmt))
+      self.parse_create_schema_statement(tokens).map(stmt => CreateSchema(stmt))
     [Keyword(Create), Keyword(Function), .. _rest] =>
       self
       .parse_create_function_statement(tokens)
-      .map(stmt => Statement::CreateFunction(stmt))
+      .map(stmt => CreateFunction(stmt))
     [Keyword(Create), Keyword(Procedure), .. _rest] =>
       self
       .parse_create_procedure_statement(tokens)
-      .map(stmt => Statement::CreateProcedure(stmt))
+      .map(stmt => CreateProcedure(stmt))
     [Keyword(Create), Keyword(Sequence), .. _rest] =>
       self
       .parse_create_sequence_statement(tokens)
-      .map(stmt => Statement::CreateSequence(stmt))
+      .map(stmt => CreateSequence(stmt))
     [Keyword(Create), Keyword(Temporary), Keyword(Sequence), .. _rest] =>
       self
       .parse_create_sequence_statement(tokens)
-      .map(stmt => Statement::CreateSequence(stmt))
+      .map(stmt => CreateSequence(stmt))
     [Keyword(Create), Keyword(Temp), Keyword(Sequence), .. _rest] =>
       self
       .parse_create_sequence_statement(tokens)
-      .map(stmt => Statement::CreateSequence(stmt))
+      .map(stmt => CreateSequence(stmt))
     [Keyword(Drop), Keyword(View), .. _rest] =>
-      self
-      .parse_drop_view_statement(tokens)
-      .map(stmt => Statement::DropView(stmt))
+      self.parse_drop_view_statement(tokens).map(stmt => DropView(stmt))
     [Keyword(Drop), Keyword(Table), .. _rest] =>
-      self
-      .parse_drop_table_statement(tokens)
-      .map(stmt => Statement::DropTable(stmt))
+      self.parse_drop_table_statement(tokens).map(stmt => DropTable(stmt))
     [Keyword(Drop), Keyword(Index), .. _rest] =>
-      self
-      .parse_drop_index_statement(tokens)
-      .map(stmt => Statement::DropIndex(stmt))
+      self.parse_drop_index_statement(tokens).map(stmt => DropIndex(stmt))
     [Keyword(Insert), .. _rest] =>
-      self.parse_insert_statement(tokens).map(stmt => Statement::Insert(stmt))
+      self.parse_insert_statement(tokens).map(stmt => Insert(stmt))
     [Keyword(Replace), .. _rest] =>
-      self.parse_replace_statement(tokens).map(stmt => Statement::Insert(stmt))
+      self.parse_replace_statement(tokens).map(stmt => Insert(stmt))
     [Keyword(Delete), .. _rest] =>
-      self.parse_delete_statement(tokens).map(stmt => Statement::Delete(stmt))
+      self.parse_delete_statement(tokens).map(stmt => Delete(stmt))
     [Keyword(Update), .. _rest] =>
-      self.parse_update_statement(tokens).map(stmt => Statement::Update(stmt))
+      self.parse_update_statement(tokens).map(stmt => Update(stmt))
     [Keyword(Merge), .. _rest] =>
-      self.parse_merge_statement(tokens).map(stmt => Statement::Merge(stmt))
+      self.parse_merge_statement(tokens).map(stmt => Merge(stmt))
     [Keyword(Truncate), .. _rest] =>
-      self
-      .parse_truncate_statement(tokens)
-      .map(stmt => Statement::Truncate(stmt))
+      self.parse_truncate_statement(tokens).map(stmt => Truncate(stmt))
     [Keyword(Alter), Keyword(Table), .. _rest] =>
-      self
-      .parse_alter_table_statement(tokens)
-      .map(stmt => Statement::AlterTable(stmt))
+      self.parse_alter_table_statement(tokens).map(stmt => AlterTable(stmt))
     [Keyword(Alter), Keyword(Index), .. _rest] =>
-      self
-      .parse_alter_index_statement(tokens)
-      .map(stmt => Statement::AlterIndex(stmt))
+      self.parse_alter_index_statement(tokens).map(stmt => AlterIndex(stmt))
     [Keyword(Begin), .. _rest] =>
-      self.parse_begin_statement(tokens).map(stmt => Statement::Begin(stmt))
+      self.parse_begin_statement(tokens).map(stmt => Begin(stmt))
     [Keyword(Start), Keyword(Transaction), .. _rest] =>
-      self
-      .parse_start_transaction_statement(tokens)
-      .map(stmt => Statement::Begin(stmt))
+      self.parse_start_transaction_statement(tokens).map(stmt => Begin(stmt))
     [Keyword(Commit), .. _rest] =>
-      self.parse_commit_statement(tokens).map(stmt => Statement::Commit(stmt))
+      self.parse_commit_statement(tokens).map(stmt => Commit(stmt))
     [Keyword(Rollback), .. _rest] =>
-      self
-      .parse_rollback_statement(tokens)
-      .map(stmt => Statement::Rollback(stmt))
+      self.parse_rollback_statement(tokens).map(stmt => Rollback(stmt))
     [Keyword(Savepoint), .. _rest] =>
-      self
-      .parse_savepoint_statement(tokens)
-      .map(stmt => Statement::Savepoint(stmt))
+      self.parse_savepoint_statement(tokens).map(stmt => Savepoint(stmt))
     [Keyword(Release), Keyword(Savepoint), .. _rest] =>
       self
       .parse_release_savepoint_statement(tokens)
-      .map(stmt => Statement::ReleaseSavepoint(stmt))
+      .map(stmt => ReleaseSavepoint(stmt))
     [Keyword(Release), .. _rest] =>
       self
       .parse_release_savepoint_statement(tokens)
-      .map(stmt => Statement::ReleaseSavepoint(stmt))
+      .map(stmt => ReleaseSavepoint(stmt))
     [Keyword(Grant), .. _rest] =>
-      self.parse_grant_statement(tokens).map(stmt => Statement::Grant(stmt))
+      self.parse_grant_statement(tokens).map(stmt => Grant(stmt))
     [Keyword(Revoke), .. _rest] =>
-      self.parse_revoke_statement(tokens).map(stmt => Statement::Revoke(stmt))
+      self.parse_revoke_statement(tokens).map(stmt => Revoke(stmt))
     [Keyword(Use), .. _rest] =>
-      self.parse_use_statement(tokens).map(stmt => Statement::Use(stmt))
+      self.parse_use_statement(tokens).map(stmt => Use(stmt))
     [Keyword(Copy), .. _rest] =>
-      self.parse_copy_statement(tokens).map(stmt => Statement::Copy(stmt))
+      self.parse_copy_statement(tokens).map(stmt => Copy(stmt))
     [Keyword(Prepare), .. _rest] =>
-      self.parse_prepare_statement(tokens).map(stmt => Statement::Prepare(stmt))
+      self.parse_prepare_statement(tokens).map(stmt => Prepare(stmt))
     [Keyword(Execute), .. _rest] =>
-      self.parse_execute_statement(tokens).map(stmt => Statement::Execute(stmt))
+      self.parse_execute_statement(tokens).map(stmt => Execute(stmt))
     [Keyword(Deallocate), .. _rest] =>
-      self
-      .parse_deallocate_statement(tokens)
-      .map(stmt => Statement::Deallocate(stmt))
+      self.parse_deallocate_statement(tokens).map(stmt => Deallocate(stmt))
     [LParen, .. rest] => {
       let (stmt, tokens) = self.parse_statement(rest)
       let tokens = self.expect_token(tokens, RParen)
@@ -246,20 +216,20 @@ fn Parser::parse_show_statement(
   }
   let (show_type, tokens) = match tokens {
     [Keyword(Tables), .. tokens] => (ShowType::Tables, tokens)
-    [Keyword(Columns), .. tokens] => (ShowType::Columns, tokens)
-    [Keyword(Status), .. tokens] => (ShowType::Status, tokens)
-    [Keyword(Databases), .. tokens] => (ShowType::Databases, tokens)
-    [Keyword(Schemas), .. tokens] => (ShowType::Schemas, tokens)
-    [Keyword(Variables), .. tokens] => (ShowType::Variables, tokens)
-    [Keyword(Processlist), .. tokens] => (ShowType::Processlist, tokens)
-    [Keyword(Grants), .. tokens] => (ShowType::Grants, tokens)
-    [Keyword(Functions), .. tokens] => (ShowType::Functions, tokens)
+    [Keyword(Columns), .. tokens] => (Columns, tokens)
+    [Keyword(Status), .. tokens] => (Status, tokens)
+    [Keyword(Databases), .. tokens] => (Databases, tokens)
+    [Keyword(Schemas), .. tokens] => (Schemas, tokens)
+    [Keyword(Variables), .. tokens] => (Variables, tokens)
+    [Keyword(Processlist), .. tokens] => (Processlist, tokens)
+    [Keyword(Grants), .. tokens] => (Grants, tokens)
+    [Keyword(Functions), .. tokens] => (Functions, tokens)
     [Keyword(Create), Keyword(Table), .. tokens] => {
       // For SHOW CREATE TABLE, the table name comes directly after, not after FROM
       let (obj_name, tokens) = self.parse_object_name(tokens)
       return (
         {
-          show_type: ShowType::CreateTable,
+          show_type: CreateTable,
           object: Some(obj_name),
           filter: None,
           extended,
@@ -274,7 +244,7 @@ fn Parser::parse_show_statement(
       let (obj_name, tokens) = self.parse_object_name(tokens)
       return (
         {
-          show_type: ShowType::CreateView,
+          show_type: CreateView,
           object: Some(obj_name),
           filter: None,
           extended,
@@ -284,14 +254,11 @@ fn Parser::parse_show_statement(
         tokens,
       )
     }
-    [Keyword(Create), Keyword(Functions), .. tokens] =>
-      (ShowType::CreateFunction, tokens)
+    [Keyword(Create), Keyword(Functions), .. tokens] => (CreateFunction, tokens)
     [Keyword(Create), Keyword(Procedure), .. tokens] =>
-      (ShowType::CreateProcedure, tokens)
-    [Keyword(Create), Keyword(Event), .. tokens] =>
-      (ShowType::CreateEvent, tokens)
-    [Keyword(Create), Keyword(Trigger), .. tokens] =>
-      (ShowType::CreateTrigger, tokens)
+      (CreateProcedure, tokens)
+    [Keyword(Create), Keyword(Event), .. tokens] => (CreateEvent, tokens)
+    [Keyword(Create), Keyword(Trigger), .. tokens] => (CreateTrigger, tokens)
     [token, .. _tokens] =>
       raise UnexpectedTokenMessageError(token, "expected SHOW statement type")
     [] => raise InternalBug("parse_show_statement: unexpected end of tokens")
@@ -312,7 +279,7 @@ fn Parser::parse_show_statement(
       (Some(ShowFilter::Like(pattern)), tokens)
     [Keyword(Where), .. tokens] => {
       let (expr, tokens) = self.parse_expr(tokens)
-      (Some(ShowFilter::Where(expr)), tokens)
+      (Some(Where(expr)), tokens)
     }
     _ => (None, tokens)
   }
@@ -329,8 +296,8 @@ fn Parser::parse_set_statement(
   // Parse scope (GLOBAL, SESSION, or default)
   let (scope, tokens) = match tokens {
     [Keyword(Global), .. tokens] => (SetScope::Global, tokens)
-    [Keyword(Session), .. tokens] => (SetScope::Session, tokens)
-    _ => (SetScope::Local, tokens) // Default scope
+    [Keyword(Session), .. tokens] => (Session, tokens)
+    _ => (Local, tokens) // Default scope
   }
 
   // Parse variable assignments
@@ -356,7 +323,7 @@ fn Parser::parse_set_assignments(
   // Parse first assignment
   let (variable, tokens) = match tokens {
     [Identifier(name), .. rest] => (name, rest)
-    [Token::Placeholder(name), .. rest] => (name, rest) // Support @variable syntax
+    [Placeholder(name), .. rest] => (name, rest) // Support @variable syntax
     [token, ..] =>
       raise UnexpectedTokenMessageError(token, "expected variable name")
     [] => raise InternalBug("parse_set_assignments: unexpected end of tokens")
@@ -371,7 +338,7 @@ fn Parser::parse_set_assignments(
       [Comma, .. rest] => {
         let (variable, remaining_tokens) = match rest {
           [Identifier(name), .. remaining] => (name, remaining)
-          [Token::Placeholder(name), .. remaining] => (name, remaining) // Support @variable syntax
+          [Placeholder(name), .. remaining] => (name, remaining) // Support @variable syntax
           [token, ..] =>
             raise UnexpectedTokenMessageError(token, "expected variable name")
           [] =>
@@ -451,7 +418,7 @@ fn Parser::parse_replace_statement(
     }
     [Keyword(Select), .. _rest] => {
       let (query, tokens) = self.parse_query(tokens)
-      (InsertSource::Query(query), tokens)
+      (Query(query), tokens)
     }
     _ => raise UnexpectedTokenError(tokens[0], Keyword(Values))
   }
@@ -464,16 +431,7 @@ fn Parser::parse_replace_statement(
     }
     _ => (None, tokens)
   }
-  (
-    {
-      table_name,
-      columns,
-      source,
-      or: Some(SqliteOnConflict::Replace),
-      on: on_insert,
-    },
-    tokens,
-  )
+  ({ table_name, columns, source, or: Some(Replace), on: on_insert, }, tokens)
 }
 
 ///|
@@ -523,14 +481,14 @@ fn Parser::parse_copy_statement(
         }
         _ => (None, tokens)
       }
-      (CopySource::Table(table_name, columns), tokens)
+      (Table(table_name, columns), tokens)
     }
   }
 
   // Parse direction (TO or FROM)
   let (direction, tokens) = match tokens {
     [Keyword(To), .. tokens] => (CopyDirection::To, tokens)
-    [Keyword(From), .. tokens] => (CopyDirection::From, tokens)
+    [Keyword(From), .. tokens] => (From, tokens)
     [token, .. _tokens] =>
       raise UnexpectedTokenMessageError(
         token, "expected TO or FROM in COPY statement",
@@ -544,10 +502,10 @@ fn Parser::parse_copy_statement(
   // Parse target (file, stdin, stdout, or program)
   let (target, tokens) = match tokens {
     [Keyword(Stdin), .. tokens] => (CopyTarget::Stdin, tokens)
-    [Keyword(Stdout), .. tokens] => (CopyTarget::Stdout, tokens)
+    [Keyword(Stdout), .. tokens] => (Stdout, tokens)
     [Keyword(Program), StringLiteral(command), .. tokens] =>
-      (CopyTarget::Program(command), tokens)
-    [StringLiteral(filename), .. tokens] => (CopyTarget::File(filename), tokens)
+      (Program(command), tokens)
+    [StringLiteral(filename), .. tokens] => (File(filename), tokens)
     [token, .. _tokens] =>
       raise UnexpectedTokenMessageError(
         token, "expected filename, STDIN, STDOUT, or PROGRAM in COPY statement",
@@ -576,70 +534,70 @@ fn Parser::parse_copy_options(
     match tokens {
       [RParen, .. tokens] => break tokens
       [Keyword(Format), Identifier("csv"), .. tokens] => {
-        options.push(CopyOption::Format(CopyFormat::Csv))
+        options.push(CopyOption::Format(Csv))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Keyword(Format), Identifier("text"), .. tokens] => {
-        options.push(CopyOption::Format(CopyFormat::Text))
+        options.push(Format(Text))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Keyword(Format), Identifier("binary"), .. tokens] => {
-        options.push(CopyOption::Format(CopyFormat::Binary))
+        options.push(Format(Binary))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Identifier("delimiter"), StringLiteral(delim), .. tokens] => {
-        options.push(CopyOption::Delimiter(delim))
+        options.push(Delimiter(delim))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Identifier("quote"), StringLiteral(quote_char), .. tokens] => {
-        options.push(CopyOption::Quote(quote_char))
+        options.push(Quote(quote_char))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Identifier("escape"), StringLiteral(escape_char), .. tokens] => {
-        options.push(CopyOption::Escape(escape_char))
+        options.push(Escape(escape_char))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Keyword(Null), StringLiteral(null_str), .. tokens] => {
-        options.push(CopyOption::Null(null_str))
+        options.push(Null(null_str))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Keyword(Header), Boolean(value), .. tokens] => {
-        options.push(CopyOption::Header(Some(value)))
+        options.push(Header(Some(value)))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Keyword(Header), .. tokens] => {
-        options.push(CopyOption::Header(None))
+        options.push(Header(None))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Keyword(ForceQuote), Mul, .. tokens] => {
-        options.push(CopyOption::ForceQuote(CopyForceQuote::All))
+        options.push(ForceQuote(All))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
@@ -667,7 +625,7 @@ fn Parser::parse_copy_options(
               )
           }
         }
-        options.push(CopyOption::ForceQuote(CopyForceQuote::Columns(columns)))
+        options.push(ForceQuote(Columns(columns)))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
@@ -695,7 +653,7 @@ fn Parser::parse_copy_options(
               )
           }
         }
-        options.push(CopyOption::ForceNotNull(columns))
+        options.push(ForceNotNull(columns))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
@@ -723,14 +681,14 @@ fn Parser::parse_copy_options(
               )
           }
         }
-        options.push(CopyOption::ForceNull(columns))
+        options.push(ForceNull(columns))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
         }
       }
       [Keyword(Encoding), StringLiteral(encoding), .. tokens] => {
-        options.push(CopyOption::Encoding(encoding))
+        options.push(Encoding(encoding))
         match tokens {
           [Comma, .. tokens] => continue tokens
           _ => continue tokens
@@ -779,13 +737,7 @@ fn Parser::parse_comma_separated_exprs(
 
 ///|
 test "Parse simple select statement" {
-  let tokens = [
-    Keyword(Select),
-    Token::Mul,
-    Keyword(From),
-    Token::Identifier("t"),
-    Token::Semicolon,
-  ]
+  let tokens = [Keyword(Select), Mul, Keyword(From), Identifier("t"), Semicolon]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(
     stmt,
@@ -800,7 +752,7 @@ test "Parse simple select statement" {
 
 ///|
 test "Parse USE database statement" {
-  let tokens = [Keyword(Use), Token::Identifier("mydb"), Token::Semicolon]
+  let tokens = [Keyword(Use), Identifier("mydb"), Semicolon]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(stmt, content="USE mydb;")
 }
@@ -809,10 +761,10 @@ test "Parse USE database statement" {
 test "Parse USE database statement with qualified name" {
   let tokens = [
     Keyword(Use),
-    Token::Identifier("company"),
-    Token::Period,
-    Token::Identifier("production"),
-    Token::Semicolon,
+    Identifier("company"),
+    Period,
+    Identifier("production"),
+    Semicolon,
   ]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(stmt, content="USE company.production;")
@@ -820,11 +772,7 @@ test "Parse USE database statement with qualified name" {
 
 ///|
 test "Parse USE database statement with backtick quoted name" {
-  let tokens = [
-    Keyword(Use),
-    Token::Identifier("my database"),
-    Token::Semicolon,
-  ]
+  let tokens = [Keyword(Use), Identifier("my database"), Semicolon]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(stmt, content="USE `my database`;")
 }
@@ -833,10 +781,10 @@ test "Parse USE database statement with backtick quoted name" {
 test "Parse COPY table TO file" {
   let tokens = [
     Keyword(Copy),
-    Token::Identifier("users"),
+    Identifier("users"),
     Keyword(To),
-    Token::StringLiteral("/tmp/users.csv"),
-    Token::Semicolon,
+    StringLiteral("/tmp/users.csv"),
+    Semicolon,
   ]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(stmt, content="COPY users TO '/tmp/users.csv';")
@@ -846,16 +794,16 @@ test "Parse COPY table TO file" {
 test "Parse COPY table FROM file with CSV format" {
   let tokens = [
     Keyword(Copy),
-    Token::Identifier("products"),
+    Identifier("products"),
     Keyword(From),
-    Token::StringLiteral("/data/products.csv"),
-    Token::LParen,
+    StringLiteral("/data/products.csv"),
+    LParen,
     Keyword(Format),
-    Token::Identifier("csv"),
-    Token::Comma,
+    Identifier("csv"),
+    Comma,
     Keyword(Header),
-    Token::RParen,
-    Token::Semicolon,
+    RParen,
+    Semicolon,
   ]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(
@@ -868,15 +816,15 @@ test "Parse COPY table FROM file with CSV format" {
 test "Parse COPY table with column list TO STDOUT" {
   let tokens = [
     Keyword(Copy),
-    Token::Identifier("orders"),
-    Token::LParen,
-    Token::Identifier("id"),
-    Token::Comma,
-    Token::Identifier("amount"),
-    Token::RParen,
+    Identifier("orders"),
+    LParen,
+    Identifier("id"),
+    Comma,
+    Identifier("amount"),
+    RParen,
     Keyword(To),
     Keyword(Stdout),
-    Token::Semicolon,
+    Semicolon,
   ]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(stmt, content="COPY orders (id, amount) TO STDOUT;")
@@ -886,25 +834,25 @@ test "Parse COPY table with column list TO STDOUT" {
 test "Parse COPY query TO file with options" {
   let tokens = [
     Keyword(Copy),
-    Token::LParen,
+    LParen,
     Keyword(Select),
-    Token::Mul,
+    Mul,
     Keyword(From),
-    Token::Identifier("customers"),
-    Token::RParen,
+    Identifier("customers"),
+    RParen,
     Keyword(To),
-    Token::StringLiteral("/tmp/customers.csv"),
-    Token::LParen,
+    StringLiteral("/tmp/customers.csv"),
+    LParen,
     Keyword(Format),
-    Token::Identifier("csv"),
-    Token::Comma,
-    Token::Identifier("delimiter"),
-    Token::StringLiteral(","),
-    Token::Comma,
+    Identifier("csv"),
+    Comma,
+    Identifier("delimiter"),
+    StringLiteral(","),
+    Comma,
     Keyword(Null),
-    Token::StringLiteral(""),
-    Token::RParen,
-    Token::Semicolon,
+    StringLiteral(""),
+    RParen,
+    Semicolon,
   ]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(
@@ -917,23 +865,23 @@ test "Parse COPY query TO file with options" {
 test "Parse COPY FROM STDIN with comprehensive options" {
   let tokens = [
     Keyword(Copy),
-    Token::Identifier("employees"),
+    Identifier("employees"),
     Keyword(From),
     Keyword(Stdin),
-    Token::LParen,
+    LParen,
     Keyword(Format),
-    Token::Identifier("csv"),
-    Token::Comma,
-    Token::Identifier("quote"),
-    Token::StringLiteral("\""),
-    Token::Comma,
-    Token::Identifier("escape"),
-    Token::StringLiteral("\\"),
-    Token::Comma,
+    Identifier("csv"),
+    Comma,
+    Identifier("quote"),
+    StringLiteral("\""),
+    Comma,
+    Identifier("escape"),
+    StringLiteral("\\"),
+    Comma,
     Keyword(ForceQuote),
-    Token::Mul,
-    Token::RParen,
-    Token::Semicolon,
+    Mul,
+    RParen,
+    Semicolon,
   ]
   let stmt = parse(tokens)[0] |> pretty_print
   inspect(
@@ -989,7 +937,7 @@ fn Parser::parse_on_conflict_clause(
           let columns = []
           // Extract column name from first expression if it's an identifier
           match first_expr {
-            Expr::Identifier(name) => columns.push(name)
+            Identifier(name) => columns.push(name)
             _ =>
               raise UnexpectedTokenMessageError(
                 tokens[0],
@@ -1029,12 +977,7 @@ fn Parser::parse_on_conflict_clause(
             None => (Some(ConflictTarget::Columns(columns)), tokens)
             Some(_condition) =>
               (
-                Some(
-                  ConflictTarget::OnExpression(
-                    Expr::CompoundIdentifier(columns),
-                    where_condition,
-                  ),
-                ),
+                Some(OnExpression(CompoundIdentifier(columns), where_condition)),
                 tokens,
               )
           }
@@ -1051,23 +994,14 @@ fn Parser::parse_on_conflict_clause(
             _ => (None, tokens)
           }
           match first_expr {
-            Expr::Identifier(name) =>
+            Identifier(name) =>
               // Single column case
               match where_condition {
-                None => (Some(ConflictTarget::Columns([name])), tokens)
+                None => (Some(Columns([name])), tokens)
                 Some(_) =>
-                  (
-                    Some(
-                      ConflictTarget::OnExpression(first_expr, where_condition),
-                    ),
-                    tokens,
-                  )
+                  (Some(OnExpression(first_expr, where_condition)), tokens)
               }
-            _ =>
-              (
-                Some(ConflictTarget::OnExpression(first_expr, where_condition)),
-                tokens,
-              )
+            _ => (Some(OnExpression(first_expr, where_condition)), tokens)
           }
         }
         [token, ..] => raise UnexpectedTokenError(token, RParen)
@@ -1078,7 +1012,7 @@ fn Parser::parse_on_conflict_clause(
       }
     }
     [Keyword(On), Keyword(Constraint), Identifier(constraint_name), .. tokens] =>
-      (Some(ConflictTarget::OnConstraint(constraint_name)), tokens)
+      (Some(OnConstraint(constraint_name)), tokens)
     _ => (None, tokens)
   }
 
@@ -1097,7 +1031,7 @@ fn Parser::parse_on_conflict_clause(
         }
         _ => (None, tokens)
       }
-      (ConflictAction::DoUpdate(assignments, where_condition), tokens)
+      (DoUpdate(assignments, where_condition), tokens)
     }
     [token, ..] =>
       raise UnexpectedTokenMessageError(
@@ -1141,8 +1075,7 @@ fn Parser::parse_load_data_statement(
   let (duplicate_handling, tokens) = match tokens {
     [Keyword(Replace), .. tokens] =>
       (Some(LoadDataDuplicateHandling::Replace), tokens)
-    [Keyword(Ignore), .. tokens] =>
-      (Some(LoadDataDuplicateHandling::Ignore), tokens)
+    [Keyword(Ignore), .. tokens] => (Some(Ignore), tokens)
     _ => (None, tokens)
   }
 
@@ -1374,7 +1307,7 @@ fn Parser::parse_prepare_statement(
               [RParen, .. rest_tokens] => break rest_tokens
               [token, ..] => raise UnexpectedTokenError(token, RParen)
               [] =>
-                raise ParserError::InternalBug(
+                raise InternalBug(
                   "parse_prepare_statement: unexpected end of tokens",
                 )
             }
@@ -1436,7 +1369,7 @@ fn Parser::parse_execute_statement(
               [RParen, .. rest_tokens] => break rest_tokens
               [token, ..] => raise UnexpectedTokenError(token, RParen)
               [] =>
-                raise ParserError::InternalBug(
+                raise InternalBug(
                   "parse_execute_statement: unexpected end of tokens",
                 )
             }

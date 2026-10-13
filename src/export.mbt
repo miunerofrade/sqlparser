@@ -6,15 +6,11 @@ pub suberror SqlParserError {
 
 ///|
 pub fn parse_sql(
-  dialect? : &Dialect = MySQL::{ },
+  dialect~ : &Dialect = MySQL::{ },
   input : String,
 ) -> Statements raise SqlParserError {
-  let tokens = tokenize(dialect~, input) catch {
-    e => raise SqlParserError::LexerError(e)
-  }
-  let stmts = parse(dialect~, tokens) catch {
-    e => raise SqlParserError::ParserError(e)
-  }
+  let tokens = tokenize(dialect~, input) catch { e => raise LexerError(e) }
+  let stmts = parse(dialect~, tokens) catch { e => raise ParserError(e) }
   { stmts, }
 }
 

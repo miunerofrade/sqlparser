@@ -63,7 +63,7 @@ fn Parser::parse_revoke_statement(
   // Parse optional RESTRICT | CASCADE
   let (cascade, tokens) = match tokens {
     [Keyword(Restrict), .. tokens] => (Some(RevokeOption::Restrict), tokens)
-    [Keyword(Cascade), .. tokens] => (Some(RevokeOption::Cascade), tokens)
+    [Keyword(Cascade), .. tokens] => (Some(Cascade), tokens)
     _ => (None, tokens)
   }
   ({ grant_option_for, privileges, objects, grantees, cascade, }, tokens)
@@ -106,34 +106,34 @@ fn Parser::parse_privilege(
         [Keyword(Privileges), .. tokens] => tokens
         _ => tokens
       }
-      (Privilege::All, tokens)
+      (All, tokens)
     }
     [Keyword(Select), .. tokens] => {
       let (columns, tokens) = self.parse_optional_column_list(tokens)
-      (Privilege::Select(columns), tokens)
+      (Select(columns), tokens)
     }
     [Keyword(Insert), .. tokens] => {
       let (columns, tokens) = self.parse_optional_column_list(tokens)
-      (Privilege::Insert(columns), tokens)
+      (Insert(columns), tokens)
     }
     [Keyword(Update), .. tokens] => {
       let (columns, tokens) = self.parse_optional_column_list(tokens)
-      (Privilege::Update(columns), tokens)
+      (Update(columns), tokens)
     }
-    [Keyword(Delete), .. tokens] => (Privilege::Delete, tokens)
+    [Keyword(Delete), .. tokens] => (Delete, tokens)
     [Keyword(References), .. tokens] => {
       let (columns, tokens) = self.parse_optional_column_list(tokens)
-      (Privilege::References(columns), tokens)
+      (References(columns), tokens)
     }
-    [Keyword(Create), .. tokens] => (Privilege::Create, tokens)
-    [Keyword(Drop), .. tokens] => (Privilege::Drop, tokens)
-    [Keyword(Alter), .. tokens] => (Privilege::Alter, tokens)
-    [Keyword(Index), .. tokens] => (Privilege::Index, tokens)
-    [Keyword(Usage), .. tokens] => (Privilege::Usage, tokens)
-    [Keyword(Execute), .. tokens] => (Privilege::Execute, tokens)
-    [Keyword(Connect), .. tokens] => (Privilege::Connect, tokens)
-    [Keyword(Temporary), .. tokens] => (Privilege::Temporary, tokens)
-    [Keyword(Temp), .. tokens] => (Privilege::Temporary, tokens)
+    [Keyword(Create), .. tokens] => (Create, tokens)
+    [Keyword(Drop), .. tokens] => (Drop, tokens)
+    [Keyword(Alter), .. tokens] => (Alter, tokens)
+    [Keyword(Index), .. tokens] => (Index, tokens)
+    [Keyword(Usage), .. tokens] => (Usage, tokens)
+    [Keyword(Execute), .. tokens] => (Execute, tokens)
+    [Keyword(Connect), .. tokens] => (Connect, tokens)
+    [Keyword(Temporary), .. tokens] => (Temporary, tokens)
+    [Keyword(Temp), .. tokens] => (Temporary, tokens)
     [token, .. _tokens] =>
       raise UnexpectedTokenMessageError(token, "expected privilege name")
     [] => raise InternalBug("parse_privilege: unexpected end of tokens")

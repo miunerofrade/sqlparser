@@ -3,8 +3,8 @@ name = "moonbit-community/sqlparser"
 version = "0.5.1"
 
 import {
-  "moonbitlang/x@0.5.1",
-  "moonbit-community/prettyprinter@0.4.10",
+  "moonbitlang/x@0.5.5",
+  "moonbit-community/prettyprinter@0.4.11",
 }
 
 readme = "README.md"
